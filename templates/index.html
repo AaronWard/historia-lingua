@@ -18,6 +18,26 @@
         #year-slider-min, #year-slider-max { font-size: 12px; }
         #output { margin-top: 20px; }
         #output p { margin: 0; }
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+        }
+        .loading::before {
+            content: "";
+            width: 50px;
+            height: 50px;
+            border: 6px solid #ccc;
+            border-top-color: #333;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
     </style>
 </head>
 <body>
@@ -65,6 +85,9 @@
                     zoom: map.getZoom(),
                     year: $('#year-slider').val()
                 }),
+                beforeSend: function() {
+                    output.innerHTML = '<div class="loading"></div>';
+                },
                 success: function(response) {
                     var year = $('#year-slider').val();
                     var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
@@ -80,14 +103,23 @@
                         contentType: 'application/json',
                         data: JSON.stringify({
                             location: location,
-                            year: $('#year-slider').val()
+                            year: yearString
                         }),
                         success: function(response) {
-                            var year = $('#year-slider').val();
-                            var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+                            var facts = response.response.split(/\d+\.\s/);
+                            var factsList = '<ul>';
+                            for (var i = 1; i < facts.length; i++) {
+                                var fact = facts[i].trim();
+                                if (fact === ".") {
+                                    continue; // Skip if fact is a single full stop
+                                }
+                                var listItem = '<li>' + fact + '</li>';
+                                factsList += listItem;
+                            }
+                            factsList += '</ul>';
 
-                            output.innerHTML = '';
-                                output.innerHTML += '<p>' + response.response + '</p>';
+                            output.innerHTML = factsList;
+
                         }
                     });
                 }
