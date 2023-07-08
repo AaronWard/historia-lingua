@@ -38,9 +38,15 @@ def get_location():
     zoom = data['zoom']
 
     location_detail = get_location_detail(lat, lon, zoom)
-    response = history_chain.run({"location": location_detail, "time_period": data['year']})
     
-    return jsonify({'address': location_detail, 'response': response})
+    return jsonify({'address': location_detail})
+
+@app.route('/get_history', methods=['POST'])
+def get_history():
+    data = request.get_json()
+    response = history_chain.run({"location": data['location'], "time_period": data['year']})
+    
+    return jsonify({'response': response['response']})
 
 @app.route('/')
 def index():

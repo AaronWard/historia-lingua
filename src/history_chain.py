@@ -44,9 +44,9 @@ class HistoryChain():
 
     def run(self, input_text):
         
-        # llm_1 = self.llm_chains[0].run(input_text)
+        llm_1 = self.llm_chains[0].run(input_text)
 
         # Return the results
         return {
-            "response": "Example Response \n 1, 2, 3 4",
+            "response": llm_1,
         }

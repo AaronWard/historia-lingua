@@ -53,6 +53,8 @@
                 map.removeLayer(lastMarker);
             }
 
+            var location = "";
+
             $.ajax({
                 url: '/get_location',
                 type: 'POST',
@@ -66,14 +68,27 @@
                 success: function(response) {
                     var year = $('#year-slider').val();
                     var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
-
+                    location = response.address;
+                    
                     lastMarker = L.marker(e.latlng).addTo(map)
                         .bindPopup('Year: ' + yearString + '<br>' + 'Location: ' + response.address)
                         .openPopup();
 
-                    output.innerHTML = '';
-                    response.response.forEach(function(fact) {
-                        output.innerHTML += '<p>' + fact + '</p>';
+                    $.ajax({
+                        url: '/get_history',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            location: location,
+                            year: $('#year-slider').val()
+                        }),
+                        success: function(response) {
+                            var year = $('#year-slider').val();
+                            var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+
+                            output.innerHTML = '';
+                                output.innerHTML += '<p>' + response.response + '</p>';
+                        }
                     });
                 }
             });
