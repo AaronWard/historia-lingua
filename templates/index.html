@@ -1,39 +1,92 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Interactive Map</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <title>Historical Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        #map {height: 600px;}
+        body, html { height: 100%; margin: 0; }
+        #map-container { height: 100%; width: 70%; float: left; position: relative; }
+        #mapid { height: 100%; }
+        #output-container { height: 100%; width: 30%; overflow-y: scroll; float: right; background-color: #f2f2f2; padding: 10px; box-sizing: border-box; }
+        #slider-container { position: absolute; bottom: 10px; right: 10px; }
+        #year-slider { width: 500px; height: 40px; -webkit-appearance: none; background: #d3d3d3; outline: none; opacity: 0.7; -webkit-transition: .2s; transition: opacity .2s; }
+        #year-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 40px; background: #4CAF50; cursor: pointer; }
+        #year-slider::-moz-range-thumb { width: 20px; height: 40px; background: #4CAF50; cursor: pointer; }
+        #year-label { margin-top: 10px; text-align: center; }
+        #year-label span { font-weight: bold; }
+        #year-slider-labels { display: flex; justify-content: space-between; margin-top: 5px; }
+        #year-slider-min, #year-slider-max { font-size: 12px; }
+        #output { margin-top: 20px; }
+        #output p { margin: 0; }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-
+    <div id="map-container">
+        <div id="mapid"></div>
+    </div>
+    <div id="output-container">
+        <h2>Historical Facts</h2>
+        <div id="output"></div>
+    </div>
+    <div id="slider-container">
+        <div id="year-slider-labels">
+            <span id="year-slider-min"></span>
+            <span id="year-slider-max"></span>
+        </div>
+        <input id="year-slider" type="range" min="-4000" max="2000" value="0" class="slider">
+        <div id="year-label">Year: <span>0 AD</span></div>
+    </div>
+    <script src="https://unpkg.com/jquery"></script>
+    <script src="https://unpkg.com/leaflet"></script>
     <script>
-        var map = L.map('map').setView([51.505, -0.09], 5);
-
+        var map = L.map('mapid').setView([51.505, -0.09], 6);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
 
-        function onMapClick(e) {
-            fetch('/location', {
-                method: 'POST',
-                body: JSON.stringify({
-                    lat: e.latlng.lat,
-                    lon: e.latlng.lng
-                }),
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            })
-            .then(response => response.text())
-            .then(address => alert(address));
-        }
+        var output = document.getElementById('output');
+        var lastMarker;
 
-        map.on('click', onMapClick);
+        map.on('click', function(e) {
+            if (lastMarker) {
+                map.removeLayer(lastMarker);
+            }
+
+            $.ajax({
+                url: '/get_location',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    lat: e.latlng.lat,
+                    lon: e.latlng.lng,
+                    zoom: map.getZoom(),
+                    year: $('#year-slider').val()
+                }),
+                success: function(response) {
+                    var year = $('#year-slider').val();
+                    var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+
+                    lastMarker = L.marker(e.latlng).addTo(map)
+                        .bindPopup('Year: ' + yearString + '<br>' + 'Location: ' + response.address)
+                        .openPopup();
+
+                    output.innerHTML = '';
+                    response.response.forEach(function(fact) {
+                        output.innerHTML += '<p>' + fact + '</p>';
+                    });
+                }
+            });
+        });
+
+        $('#year-slider').on('input', function() {
+            var year = $(this).val();
+            var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+            $('#year-label span').text(yearString);
+        });
+
+        $('#year-slider-min').text($('#year-slider').attr('min') + ' BC');
+        $('#year-slider-max').text($('#year-slider').attr('max') + ' AD');
     </script>
 </body>
 </html>

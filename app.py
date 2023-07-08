@@ -1,22 +1,50 @@
-from flask import Flask, render_template, request
+import os
+from flask import Flask, render_template, request, jsonify
 from geopy.geocoders import Nominatim
+from dotenv import load_dotenv
+import argparse
+from src.history_chain import HistoryChain
+from src.utils.env_utils import get_openai_key
 
 app = Flask(__name__)
-geolocator = Nominatim(user_agent="geoapiExercises")
+geolocator = Nominatim(user_agent="map_app")
 
-@app.route("/")
-def index():
-    return render_template('index.html')
+parser = argparse.ArgumentParser()
+parser.add_argument("--env_path", help="The path to the .env file containing the OpenAI key")
+args = parser.parse_args()
+load_dotenv(dotenv_path=args.env_path)
+openai_api_key = get_openai_key(args.env_path)
 
-@app.route("/location", methods=['POST'])
-def location():
+history_chain = HistoryChain(openai_api_key=openai_api_key)
+
+def get_location_detail(lat, lon, zoom):
+    location = geolocator.reverse([lat, lon], exactly_one=True)
+    address = location.raw['address']
+
+    if zoom <=2:
+        return address.get('country', '')
+    elif zoom <= 5:
+        return ', '.join(filter(None, [address.get('state', ''), address.get('country', '')]))
+    elif zoom <= 10:
+        return ', '.join(filter(None, [address.get('city', ''), address.get('state', ''), address.get('country', '')]))
+    else:
+        return ', '.join(filter(None, [address.get('road', ''), address.get('city', ''), address.get('state', ''), address.get('country', '')]))
+
+@app.route('/get_location', methods=['POST'])
+def get_location():
     data = request.get_json()
     lat = data['lat']
     lon = data['lon']
+    zoom = data['zoom']
 
-    location = geolocator.reverse([lat, lon])
+    location_detail = get_location_detail(lat, lon, zoom)
+    response = history_chain.run({"location": location_detail, "time_period": data['year']})
+    
+    return jsonify({'address': location_detail, 'response': response})
 
-    return location.address
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 if __name__ == "__main__":
     app.run(debug=True)
