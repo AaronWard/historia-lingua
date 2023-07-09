@@ -147,7 +147,8 @@
 
         var output = document.getElementById('output');
         var lastMarker;
-            
+        var h2 = document.querySelector("#output-container h2");
+
 
         map.on('click', function(e) {
             if (lastMarker) {
@@ -156,6 +157,7 @@
 
             // TODO: fix the highlight and get location
             var location = "";
+            
 
             $.ajax({
                 url: '/get_location',
@@ -174,6 +176,8 @@
                     var year = $('#year-slider').val();
                     var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
                     location = response.address;
+                    h2.innerHTML = 'Historical Facts (' + response.address + ')';
+
 
                     lastMarker = L.marker(e.latlng).addTo(map)
                         .bindPopup('Year: ' + yearString + '<br>' + 'Location: ' + response.address)
@@ -219,12 +223,14 @@
 
       // Event listener to detect when the user has highlighted text
         document.addEventListener('mouseup', function() {
-            var year = $('#year-slider').val();
-            var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
-            var previous_response = output.innerHTML
             var selectedText = window.getSelection().toString().trim();
-            // var current_text = 
+
             if (selectedText.length > 0) {
+                var location = h2.innerHTML.replace('Historical Facts (', '').replace(')', '');  // Extract location from h2 content
+                var year = $('#year-slider').val();
+                var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+                var previous_response = output.innerHTML
+
                 $.ajax({
                     url: '/handle_selected_text',
                     type: 'POST',
@@ -239,11 +245,12 @@
                         output.innerHTML = '<div class="loading"></div>';
                     },
                     success: function(response) {
+                        console.log(response)
                         var facts = response.response.split(/\d+\.\s/);
                         var factsList = '<ul>';
                         for (var i = 1; i < facts.length; i++) {
                             var fact = facts[i].trim();
-                            if (fact === ".") {
+                            if (fact === "." ) {
                                 continue; // Skip if fact is a single full stop
                             }
                             var listItem = '<li>' + fact + '</li>';

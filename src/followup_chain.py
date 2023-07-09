@@ -13,7 +13,7 @@ You just gave historical information for {location} around the time period of {t
 this is the answer you gave {previous_response}. \n
 Provide bullet points in relation to what you said previously with more information around this topic: {selected_text}. \n
 
-You always provide a full answer. Provide detailed points.\n
+Provide no filler or conversation response, just detailed bullet points.\n
 If you are unsure of the history for this time period, explain that the for this area and time period 
 is limited. \n\n
 """
