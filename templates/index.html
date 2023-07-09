@@ -118,6 +118,19 @@
                 transform: rotate(360deg);
             }
         }
+
+        /* style for the expand button */
+        .expand-button {
+            position: absolute;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            padding: 5px 10px;
+            border-radius: 5px;
+            display: none;
+            z-index: 1000;
+        }
     </style>
 </head>
 <body>
@@ -136,6 +149,10 @@
         <input id="year-slider" type="range" min="-4000" max="2000" value="-1" class="slider" step="10">
         <div id="year-label">Year: <span>0 AD</span></div>
     </div>
+
+    <!-- add a button for expanding the selected text -->
+    <button id="expand-button" class="expand-button">Expand</button>
+
     <script src="https://unpkg.com/jquery"></script>
     <script src="https://unpkg.com/leaflet"></script>
     <script>
@@ -148,17 +165,22 @@
         var output = document.getElementById('output');
         var lastMarker;
         var h2 = document.querySelector("#output-container h2");
+        var expandButton = document.getElementById('expand-button');
+        var selectedText = '';
 
+        // Function to move the expand button to the cursor position
+        function moveButton(e) {
+            expandButton.style.top = e.pageY + 'px';
+            expandButton.style.left = e.pageX + 'px';
+        }
 
         map.on('click', function(e) {
             if (lastMarker) {
                 map.removeLayer(lastMarker);
             }
 
-            // TODO: fix the highlight and get location
             var location = "";
             
-
             $.ajax({
                 url: '/get_location',
                 type: 'POST',
@@ -218,55 +240,55 @@
             $('#year-label span').text(yearString);
         });
 
-        $('#year-slider-min').text($('#year-slider').attr('min') + ' BC');
-        $('#year-slider-max').text($('#year-slider').attr('max') + ' AD');
+        // Hide the button when not highlighting text
+        document.addEventListener('mousedown', function() {
+            expandButton.style.display = 'none';
+        });
 
-      // Event listener to detect when the user has highlighted text
-        document.addEventListener('mouseup', function() {
-            var selectedText = window.getSelection().toString().trim();
-
+        // Show the button when text is highlighted
+        document.addEventListener('mouseup', function(e) {
+            selectedText = window.getSelection().toString().trim();
             if (selectedText.length > 0) {
-                var location = h2.innerHTML.replace('Historical Facts (', '').replace(')', '');  // Extract location from h2 content
-                var year = $('#year-slider').val();
-                var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
-                var previous_response = output.innerHTML
-
-                $.ajax({
-                    url: '/handle_selected_text',
-                    type: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({
-                        location: location,
-                        year: yearString,
-                        previous_response: previous_response,
-                        selected_text: selectedText
-                    }),
-                    beforeSend: function() {
-                        output.innerHTML = '<div class="loading"></div>';
-                    },
-                    success: function(response) {
-                        console.log(response)
-                        var facts = response.response.split(/\d+\.\s/);
-                        var factsList = '<ul>';
-                        for (var i = 1; i < facts.length; i++) {
-                            var fact = facts[i].trim();
-                            if (fact === "." ) {
-                                continue; // Skip if fact is a single full stop
-                            }
-                            var listItem = '<li>' + fact + '</li>';
-                            factsList += listItem;
-                        }
-                        factsList += '</ul>';
-
-                        output.innerHTML = factsList;
-
-                    },
-                    error: function(xhr, status, error) {
-                        console.error(error);
-                    }
-                });
+                moveButton(e);
+                expandButton.style.display = 'block';
             }
         });
+
+        // Handle click on expand button
+        expandButton.addEventListener('click', function(e) {
+            // Stop the propagation of the event
+            e.stopPropagation();
+
+            // Immediately hide the button after it's clicked
+            expandButton.style.display = 'none';
+
+            var location = h2.innerHTML.replace('Historical Facts (', '').replace(')', '');
+            var year = $('#year-slider').val();
+            var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+            var previous_response = output.innerHTML;
+
+            $.ajax({
+                url: '/handle_selected_text',
+                type: 'POST',
+                contentType: 'application/json',
+                data: JSON.stringify({
+                    location: location,
+                    year: yearString,
+                    previous_response: previous_response,
+                    selected_text: selectedText
+                }),
+                beforeSend: function() {
+                    output.innerHTML = '<div class="loading"></div>';
+                },
+                success: function(response) {
+                    output.innerHTML = response.response;
+                },
+                error: function(xhr, status, error) {
+                    console.error(error);
+                }
+            });
+        });
+
 
     </script>
 </body>
