@@ -10,10 +10,13 @@ import langchain
 
 PROMPT_STRING = """
 You goal is to respond with 10 interest historical facts for {location} around \n
-the time period of {time_period}, give or take a few years. Do not provide historical information for other than this period. \n
+Only provide information from time period is around {time_period}, give or take a few years. \n
+Do not provide historical information for other than this period. \n
 Provide context of what was going in the region around that time. \n
 Provide no filler or conversation response, just detailed bullet points.\n
 You should always provide a full response.
+If you are unsure of the history for this time period, explain that the for this area and time period 
+is limited.
 """
 
 class HistoryChain():

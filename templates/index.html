@@ -4,35 +4,113 @@
     <title>Historical Map</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
-        body, html { height: 100%; margin: 0; }
-        #map-container { height: 100%; width: 70%; float: left; position: relative; }
-        #mapid { height: 100%; }
-        #output-container { height: 100%; width: 30%; overflow-y: scroll; float: right; background-color: #f2f2f2; padding: 10px; box-sizing: border-box; }
-        #slider-container { position: absolute; bottom: 10px; right: 10px; }
-        #year-slider { width: 500px; height: 40px; -webkit-appearance: none; background: #d3d3d3; outline: none; opacity: 0.7; -webkit-transition: .2s; transition: opacity .2s; }
-        #year-slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 20px; height: 40px; background: #4CAF50; cursor: pointer; }
-        #year-slider::-moz-range-thumb { width: 20px; height: 40px; background: #4CAF50; cursor: pointer; }
-        #year-label { margin-top: 10px; text-align: center; }
-        #year-label span { font-weight: bold; }
-        #year-slider-labels { display: flex; justify-content: space-between; margin-top: 5px; }
-        #year-slider-min, #year-slider-max { font-size: 12px; }
-        #output { margin-top: 20px; }
-        #output p { margin: 0; }
+        body, html {
+            height: 100%;
+            margin: 0;
+            font-family: Arial, sans-serif;
+        }
+
+        #map-container {
+            height: 100%;
+            width: 70%;
+            float: left;
+            position: relative;
+        }
+
+        #mapid {
+            height: 100%;
+        }
+
+        #output-container {
+            height: 100%;
+            width: 30%;
+            overflow-y: scroll;
+            float: right;
+            background-color: #f2f2f2;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        #slider-container {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+        }
+
+        #year-slider {
+            width: 500px;
+            height: 40px;
+            -webkit-appearance: none;
+            background: #d3d3d3;
+            outline: none;
+            opacity: 0.7;
+            -webkit-transition: .2s;
+            transition: opacity .2s;
+        }
+
+        #year-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 40px;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+
+        #year-slider::-moz-range-thumb {
+            width: 20px;
+            height: 40px;
+            background: #4CAF50;
+            cursor: pointer;
+        }
+
+        #year-label {
+            margin-top: 10px;
+            text-align: center;
+        }
+
+        #year-label span {
+            font-weight: bold;
+        }
+
+        #year-slider-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+        }
+
+        #year-slider-min,
+        #year-slider-max {
+            font-size: 12px;
+        }
+
+        #output {
+            margin-top: 20px;
+            min-height: 400px;
+        }
+
+        #output p {
+            margin: 0;
+        }
+
         .loading {
             display: flex;
             align-items: center;
             justify-content: center;
             height: 100%;
         }
+
         .loading::before {
             content: "";
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
+            margin-top: 50%;
             border: 6px solid #ccc;
             border-top-color: #333;
-            border-radius: 50%;
+            border-radius: 70%;
             animation: spin 1s linear infinite;
         }
+
         @keyframes spin {
             to {
                 transform: rotate(360deg);
@@ -53,14 +131,14 @@
             <span id="year-slider-min"></span>
             <span id="year-slider-max"></span>
         </div>
-        <input id="year-slider" type="range" min="-4000" max="2000" value="0" class="slider">
+        <input id="year-slider" type="range" min="-4000" max="2000" value="-1" class="slider">
         <div id="year-label">Year: <span>0 AD</span></div>
     </div>
     <script src="https://unpkg.com/jquery"></script>
     <script src="https://unpkg.com/leaflet"></script>
     <script>
         var map = L.map('mapid').setView([51.505, -0.09], 6);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        L.tileLayer('https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
             attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
@@ -92,7 +170,7 @@
                     var year = $('#year-slider').val();
                     var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
                     location = response.address;
-                    
+
                     lastMarker = L.marker(e.latlng).addTo(map)
                         .bindPopup('Year: ' + yearString + '<br>' + 'Location: ' + response.address)
                         .openPopup();
