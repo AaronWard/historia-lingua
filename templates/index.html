@@ -147,13 +147,14 @@
 
         var output = document.getElementById('output');
         var lastMarker;
-
+            
 
         map.on('click', function(e) {
             if (lastMarker) {
                 map.removeLayer(lastMarker);
             }
 
+            // TODO: fix the highlight and get location
             var location = "";
 
             $.ajax({
@@ -218,6 +219,9 @@
 
       // Event listener to detect when the user has highlighted text
         document.addEventListener('mouseup', function() {
+            var year = $('#year-slider').val();
+            var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
+            var previous_response = output.innerHTML
             var selectedText = window.getSelection().toString().trim();
             // var current_text = 
             if (selectedText.length > 0) {
@@ -226,13 +230,29 @@
                     type: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({
-                        selectedText: selectedText
+                        location: location,
+                        year: yearString,
+                        previous_response: previous_response,
+                        selected_text: selectedText
                     }),
                     beforeSend: function() {
                         output.innerHTML = '<div class="loading"></div>';
                     },
                     success: function(response) {
-                        output.innerHTML = selectedText;
+                        var facts = response.response.split(/\d+\.\s/);
+                        var factsList = '<ul>';
+                        for (var i = 1; i < facts.length; i++) {
+                            var fact = facts[i].trim();
+                            if (fact === ".") {
+                                continue; // Skip if fact is a single full stop
+                            }
+                            var listItem = '<li>' + fact + '</li>';
+                            factsList += listItem;
+                        }
+                        factsList += '</ul>';
+
+                        output.innerHTML = factsList;
+
                     },
                     error: function(xhr, status, error) {
                         console.error(error);

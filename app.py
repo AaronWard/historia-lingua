@@ -4,6 +4,7 @@ from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 import argparse
 from src.history_chain import HistoryChain
+from src.followup_chain import FollowUpChain
 from src.utils.env_utils import get_openai_key
 
 app = Flask(__name__)
@@ -16,6 +17,7 @@ load_dotenv(dotenv_path=args.env_path)
 openai_api_key = get_openai_key(args.env_path)
 
 history_chain = HistoryChain(openai_api_key=openai_api_key)
+followup_chain = FollowUpChain(openai_api_key=openai_api_key)
 
 def get_location_detail(lat, lon, zoom):
     location = geolocator.reverse([lat, lon], exactly_one=True)
@@ -51,8 +53,11 @@ def get_history():
 @app.route('/handle_selected_text', methods=['POST'])
 def handle_selected_text():
     data = request.get_json()
+
+    response = followup_chain.run({"location": data['location'], "time_period": data['year'],
+                                   "previous_response": data['previous_response'], "selected_text": data['selected_text']})
     
-    return jsonify({'res': "hello"})
+    return jsonify({'response': response['response']})
 
 
 @app.route('/')
