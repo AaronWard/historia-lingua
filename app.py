@@ -48,6 +48,13 @@ def get_history():
     
     return jsonify({'response': response['response']})
 
+@app.route('/handle_selected_text', methods=['POST'])
+def handle_selected_text():
+    data = request.get_json()
+    
+    return jsonify({'res': "hello"})
+
+
 @app.route('/')
 def index():
     return render_template('index.html')

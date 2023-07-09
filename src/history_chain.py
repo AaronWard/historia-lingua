@@ -9,14 +9,13 @@ import langchain
 
 
 PROMPT_STRING = """
-You goal is to respond with 10 interest historical facts for {location} around \n
-Only provide information from time period is around {time_period}, give or take a few years. \n
-Do not provide historical information for other than this period. \n
+You goal is to respond with 10 interest detailed historical facts about {location}. \n
+Only provide information from around this time period, give or take a few decades: {time_period}. \n
 Provide context of what was going in the region around that time. \n
 Provide no filler or conversation response, just detailed bullet points.\n
-You should always provide a full response.
+You should always provide a full response. \n
 If you are unsure of the history for this time period, explain that the for this area and time period 
-is limited.
+is limited. \n\n
 """
 
 class HistoryChain():
@@ -44,7 +43,8 @@ class HistoryChain():
         prompt_1 = self.get_template(input=["location", "time_period"])
 
         return langchain.LLMChain(llm=langchain.OpenAI(
-            openai_api_key=self.openai_api_key), prompt=prompt_1)
+            openai_api_key=self.openai_api_key,
+            model_name="gpt-4"), prompt=prompt_1)
 
     def run(self, input_text):
         

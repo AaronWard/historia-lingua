@@ -22,7 +22,7 @@
         }
 
         #output-container {
-            height: 100%;
+            height: 90%;
             width: 30%;
             overflow-y: scroll;
             float: right;
@@ -87,10 +87,12 @@
         #output {
             margin-top: 20px;
             min-height: 400px;
+            overflow-y: auto; 
         }
 
         #output p {
             margin: 0;
+            overflow-y: auto; 
         }
 
         .loading {
@@ -131,7 +133,7 @@
             <span id="year-slider-min"></span>
             <span id="year-slider-max"></span>
         </div>
-        <input id="year-slider" type="range" min="-4000" max="2000" value="-1" class="slider">
+        <input id="year-slider" type="range" min="-4000" max="2000" value="-1" class="slider" step="10">
         <div id="year-label">Year: <span>0 AD</span></div>
     </div>
     <script src="https://unpkg.com/jquery"></script>
@@ -145,6 +147,7 @@
 
         var output = document.getElementById('output');
         var lastMarker;
+
 
         map.on('click', function(e) {
             if (lastMarker) {
@@ -212,6 +215,32 @@
 
         $('#year-slider-min').text($('#year-slider').attr('min') + ' BC');
         $('#year-slider-max').text($('#year-slider').attr('max') + ' AD');
+
+      // Event listener to detect when the user has highlighted text
+        document.addEventListener('mouseup', function() {
+            var selectedText = window.getSelection().toString().trim();
+            // var current_text = 
+            if (selectedText.length > 0) {
+                $.ajax({
+                    url: '/handle_selected_text',
+                    type: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        selectedText: selectedText
+                    }),
+                    beforeSend: function() {
+                        output.innerHTML = '<div class="loading"></div>';
+                    },
+                    success: function(response) {
+                        output.innerHTML = selectedText;
+                    },
+                    error: function(xhr, status, error) {
+                        console.error(error);
+                    }
+                });
+            }
+        });
+
     </script>
 </body>
 </html>
