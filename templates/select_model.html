@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <!-- Include Bootstrap CSS (make sure you have internet connection) -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+    <title>Select Model</title>
+    <style>
+        body {
+            background-color: #5C6B9C;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row">
+            <div class="col-md-6 col-md-offset-3">
+                <h2 class="text-center">Select a Model</h2>
+                <p class="text-center"><i>For the best experience, GPT-4 Is recommended if you have API access.</i></p>
+                <form action="" method="post">
+                    <div class="form-group">
+                        <label for="model">Model:</label>
+                        <select class="form-control" id="model" name="model">
+                            {% for model in models %}
+                                {% if "gpt" in model or "text-davinci" in model %}
+                                    <option>{{ model }}</option>
+                                {% endif %}
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-default">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- Include Bootstrap and jQuery libraries -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+</body>
+</html>

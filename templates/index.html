@@ -29,6 +29,7 @@
             background-color: #f2f2f2;
             padding: 10px;
             box-sizing: border-box;
+            position: relative; 
         }
 
         #slider-container {
@@ -122,7 +123,7 @@
         /* style for the expand button */
         .expand-button {
             position: absolute;
-            background-color: #4CAF50;
+            background-color: #5C6B9C;
             color: white;
             border: none;
             cursor: pointer;
@@ -130,7 +131,26 @@
             border-radius: 5px;
             display: none;
             z-index: 1000;
+            -webkit-user-select: none; /* Safari 3.1+ */
+            -moz-user-select: none; /* Firefox 2+ */
+            -ms-user-select: none; /* IE 10+ */
+            user-select: none; /* Standard syntax */
         }
+
+        .change-model-button {
+            position: right;
+            top: 10px; 
+            left: 10px;
+            float: right;
+            background-color: #5C6B9C;
+            color: white;
+            border: none;
+            /* cursor: pointer; */
+            padding: 5px 10px;
+            border-radius: 3px;
+            
+        }
+
     </style>
 </head>
 <body>
@@ -138,7 +158,9 @@
         <div id="mapid"></div>
     </div>
     <div id="output-container">
+        <button id="change-model-button" class="change-model-button">Change Model</button>
         <h2>Historical Facts</h2>
+        <h5 id="selected-text" style="font-style: italic;"></h5>
         <div id="output"></div>
     </div>
     <div id="slider-container">
@@ -154,9 +176,16 @@
     <button id="expand-button" class="expand-button">Expand</button>
 
     <script src="https://unpkg.com/jquery"></script>
-    <script src="https://unpkg.com/leaflet"></script>
+    <script src="https://unpkg.com/leaflet"></script>    
     <script>
-        var map = L.map('mapid').setView([51.505, -0.09], 6);
+        /**
+         * Script for handling the main components of the webpage.
+         * Lays out the map and applies a function for making a request
+         * when the location on the map i clicked. It also handles the year
+         * slider for choosing a time period
+         */
+        
+        var map = L.map('mapid').setView([51.505, -0.09], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
             attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 19
@@ -165,14 +194,7 @@
         var output = document.getElementById('output');
         var lastMarker;
         var h2 = document.querySelector("#output-container h2");
-        var expandButton = document.getElementById('expand-button');
         var selectedText = '';
-
-        // Function to move the expand button to the cursor position
-        function moveButton(e) {
-            expandButton.style.top = e.pageY + 'px';
-            expandButton.style.left = e.pageX + 'px';
-        }
 
         map.on('click', function(e) {
             if (lastMarker) {
@@ -199,6 +221,8 @@
                     var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
                     location = response.address;
                     h2.innerHTML = 'Historical Facts (' + response.address + ')';
+
+                    document.getElementById('selected-text').textContent = "";
 
 
                     lastMarker = L.marker(e.latlng).addTo(map)
@@ -234,38 +258,74 @@
             });
         });
 
+        
         $('#year-slider').on('input', function() {
             var year = $(this).val();
             var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
             $('#year-label span').text(yearString);
         });
-
-        // Hide the button when not highlighting text
-        document.addEventListener('mousedown', function() {
-            expandButton.style.display = 'none';
+    </script>
+    <script>
+        /**
+        * Script for handling changing of models
+        * 
+        */ 
+     
+        document.getElementById('change-model-button').addEventListener('click', function() {
+            // This will clear the session storage and redirect to select_model
+            sessionStorage.clear();
+            window.location.href = '/select_model';
         });
 
-        // Show the button when text is highlighted
-        document.addEventListener('mouseup', function(e) {
-            selectedText = window.getSelection().toString().trim();
+    </script>
+    <script>
+        // Add new handlers
+        document.addEventListener('mouseup', createButtonHandler);
+        document.addEventListener('mousedown', clickElsewhereHandler);
+
+        function createButtonHandler(e) {
+            // Only respond to selections inside 'output-container'
+            if (!e.target.closest('#output-container')) return;
+
+            let selectedText = window.getSelection().toString().trim();
+
+            // Remove any existing expand button
+            let existingExpandButton = document.querySelector('.expand-button');
+            if (existingExpandButton) existingExpandButton.remove();
+
+            // Create a new button if text is selected
             if (selectedText.length > 0) {
-                moveButton(e);
-                expandButton.style.display = 'block';
+                let expandButton = document.createElement('button');
+                expandButton.textContent = 'Expand';
+                expandButton.style.position = 'absolute';
+                expandButton.style.top = (e.clientY - 30) + 'px';  // move up to avoid overlap
+                expandButton.style.left = e.clientX + 'px';
+                expandButton.className = 'expand-button';
+                expandButton.addEventListener('click', function(event) {
+                    event.stopPropagation();  // prevent triggering of mousedown event
+
+                    // Update h4 with the selected text, cut off after 100 characters
+                    var selectedTextDisplay = selectedText.substring(0, 100);
+                    document.getElementById('selected-text').textContent = selectedTextDisplay;
+
+                    // Handle selected text and remove the button after clicking it
+                    handleSelectedText(selectedText);
+                    expandButton.remove();
+                });
+                document.body.appendChild(expandButton);
             }
-        });
+        }
 
-        // Handle click on expand button
-        expandButton.addEventListener('click', function(e) {
-            // Stop the propagation of the event
-            e.stopPropagation();
+        function clickElsewhereHandler(e) {
+            let expandButton = document.querySelector('.expand-button');
+            if (expandButton && e.target !== expandButton) expandButton.remove();
+        }
 
-            // Immediately hide the button after it's clicked
-            expandButton.style.display = 'none';
-
-            var location = h2.innerHTML.replace('Historical Facts (', '').replace(')', '');
-            var year = $('#year-slider').val();
+        function handleSelectedText(selectedText) {
+            var location = document.getElementById('location').textContent;
+            var year = document.getElementById('year-slider').value;
             var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
-            var previous_response = output.innerHTML;
+            var previous_response = document.getElementById('output-container').innerHTML;
 
             $.ajax({
                 url: '/handle_selected_text',
@@ -278,18 +338,23 @@
                     selected_text: selectedText
                 }),
                 beforeSend: function() {
-                    output.innerHTML = '<div class="loading"></div>';
+                    document.getElementById('output-container').innerHTML = '<div class="loading"></div>';
                 },
                 success: function(response) {
-                    output.innerHTML = response.response;
+                    document.getElementById('output-container').innerHTML = previous_response + '<p>' + response.response + '</p>';
                 },
                 error: function(xhr, status, error) {
                     console.error(error);
                 }
             });
-        });
-
-
+        }
     </script>
+
+
+    
+    
+    
+    
+
 </body>
 </html>

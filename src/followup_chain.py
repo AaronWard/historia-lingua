@@ -20,10 +20,11 @@ is limited. \n\n
 
 class FollowUpChain():
 
-    def __init__(self, openai_api_key):
+    def __init__(self, openai_api_key, model):
         super().__init__()
         self.openai_api_key = openai_api_key
         self.llm_chains = []  # Buffer to store LLMChain objects
+        self.model = model
 
         # Add LLMChain objects to the buffer
         self.add_chain(self.get_history_chain())
@@ -44,7 +45,7 @@ class FollowUpChain():
 
         return langchain.LLMChain(llm=langchain.OpenAI(
             openai_api_key=self.openai_api_key,
-            model_name="gpt-4"), prompt=prompt_1)
+            model_name=self.model), prompt=prompt_1)
 
     def run(self, input_text):
         
