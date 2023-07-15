@@ -178,39 +178,40 @@
     <script src="https://unpkg.com/jquery"></script>
     <script src="https://unpkg.com/leaflet"></script>    
     <script>
-        /**
-         * Script for handling the main components of the webpage.
-         * Lays out the map and applies a function for making a request
-         * when the location on the map i clicked. It also handles the year
-         * slider for choosing a time period
-         */
-        
+        // Initializing necessary variables and map setup
         var map = L.map('mapid').setView([51.505, -0.09], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
             attribution: 'Map data © <a href="https://openstreetmap.org">OpenStreetMap</a> contributors',
             maxZoom: 19
         }).addTo(map);
-
+    
         var output = document.getElementById('output');
         var lastMarker;
         var h2 = document.querySelector("#output-container h2");
         var selectedText = '';
+        var clickedLat = null;
+        var clickedLng = null;
+        var zoom = null;
 
+        // Handling click events on map
         map.on('click', function(e) {
             if (lastMarker) {
                 map.removeLayer(lastMarker);
             }
-
+    
             var location = "";
+            clickedLat = e.latlng.lat;
+            clickedLng = e.latlng.lng;
+            zoom =  map.getZoom()
             
             $.ajax({
                 url: '/get_location',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
-                    lat: e.latlng.lat,
-                    lon: e.latlng.lng,
-                    zoom: map.getZoom(),
+                    lat: clickedLat,
+                    lon: clickedLng,
+                    zoom: zoom,
                     year: $('#year-slider').val()
                 }),
                 beforeSend: function() {
@@ -221,14 +222,14 @@
                     var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
                     location = response.address;
                     h2.innerHTML = 'Historical Facts (' + response.address + ')';
-
+    
                     document.getElementById('selected-text').textContent = "";
-
-
+    
+    
                     lastMarker = L.marker(e.latlng).addTo(map)
                         .bindPopup('Year: ' + yearString + '<br>' + 'Location: ' + response.address)
                         .openPopup();
-
+    
                     $.ajax({
                         url: '/get_history',
                         type: 'POST',
@@ -249,112 +250,110 @@
                                 factsList += listItem;
                             }
                             factsList += '</ul>';
-
+    
                             output.innerHTML = factsList;
-
+    
                         }
                     });
                 }
             });
         });
-
-        
+    
+        // Handling year slider change
         $('#year-slider').on('input', function() {
             var year = $(this).val();
             var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
             $('#year-label span').text(yearString);
         });
-    </script>
-    <script>
-        /**
-        * Script for handling changing of models
-        * 
-        */ 
-     
+    
+        // Handling model change button
         document.getElementById('change-model-button').addEventListener('click', function() {
-            // This will clear the session storage and redirect to select_model
             sessionStorage.clear();
             window.location.href = '/select_model';
         });
-
-    </script>
-    <script>
-        // Add new handlers
-        document.addEventListener('mouseup', createButtonHandler);
-        document.addEventListener('mousedown', clickElsewhereHandler);
-
-        function createButtonHandler(e) {
-            // Only respond to selections inside 'output-container'
-            if (!e.target.closest('#output-container')) return;
-
-            let selectedText = window.getSelection().toString().trim();
-
-            // Remove any existing expand button
-            let existingExpandButton = document.querySelector('.expand-button');
-            if (existingExpandButton) existingExpandButton.remove();
-
-            // Create a new button if text is selected
-            if (selectedText.length > 0) {
-                let expandButton = document.createElement('button');
-                expandButton.textContent = 'Expand';
-                expandButton.style.position = 'absolute';
-                expandButton.style.top = (e.clientY - 30) + 'px';  // move up to avoid overlap
-                expandButton.style.left = e.clientX + 'px';
-                expandButton.className = 'expand-button';
-                expandButton.addEventListener('click', function(event) {
-                    event.stopPropagation();  // prevent triggering of mousedown event
-
-                    // Update h4 with the selected text, cut off after 100 characters
-                    var selectedTextDisplay = selectedText.substring(0, 100);
-                    document.getElementById('selected-text').textContent = selectedTextDisplay;
-
-                    // Handle selected text and remove the button after clicking it
-                    handleSelectedText(selectedText);
-                    expandButton.remove();
-                });
-                document.body.appendChild(expandButton);
+    
+        // Handling mouseup events for text selection
+        document.addEventListener('mouseup', function() {
+            var text = getSelectionText();
+            if (text) {
+                var expandButton = document.getElementById('expand-button');
+                var rect = window.getSelection().getRangeAt(0).getBoundingClientRect();
+                expandButton.style.left = rect.left + 'px';
+                expandButton.style.top = (window.scrollY + rect.top) + 'px';
+                expandButton.style.display = 'block'; // Show the button
             }
+        });
+    
+        // Handler for expand button
+        document.getElementById('expand-button').addEventListener('click', function() {
+            var text = getSelectionText();
+            document.getElementById('selected-text').textContent = text;
+            this.style.display = 'none'; // Hide the button
+    
+            handleSelectedText(text);
+        });
+    
+        // Function to get selected text
+        function getSelectionText() {
+            var text = '';
+            if (window.getSelection) {
+                text = window.getSelection().toString();
+            } else if (document.selection && document.selection.type != 'Control') {
+                text = document.selection.createRange().text;
+            }
+            return text;
         }
-
-        function clickElsewhereHandler(e) {
-            let expandButton = document.querySelector('.expand-button');
-            if (expandButton && e.target !== expandButton) expandButton.remove();
-        }
-
+    
+        // Function to handle selected text
         function handleSelectedText(selectedText) {
-            var location = document.getElementById('location').textContent;
             var year = document.getElementById('year-slider').value;
             var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
             var previous_response = document.getElementById('output-container').innerHTML;
-
+    
             $.ajax({
-                url: '/handle_selected_text',
+                url: '/get_location',
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify({
-                    location: location,
-                    year: yearString,
-                    previous_response: previous_response,
-                    selected_text: selectedText
+                    lat: clickedLat,
+                    lon: clickedLng,
+                    zoom: zoom,
+                    year: $('#year-slider').val()
                 }),
                 beforeSend: function() {
-                    document.getElementById('output-container').innerHTML = '<div class="loading"></div>';
+                    output.innerHTML = '<div class="loading"></div>';
                 },
                 success: function(response) {
-                    document.getElementById('output-container').innerHTML = previous_response + '<p>' + response.response + '</p>';
+                    var location = response.address;
+    
+                    // Make subsequent request after the location is fetched
+                    $.ajax({
+                        url: '/handle_selected_text',
+                        type: 'POST',
+                        contentType: 'application/json',
+                        data: JSON.stringify({
+                            location: location,
+                            year: yearString,
+                            previous_response: previous_response,
+                            selected_text: selectedText
+                        }),
+                        beforeSend: function() {
+                            output.innerHTML = '<div class="loading"></div>';
+                        },
+                        success: function(response) {
+                            document.getElementById('output-container').innerHTML = previous_response + '<p>' + response.response + '</p>';
+                        },
+                        error: function(xhr, status, error) {
+                            console.error(error);
+                        }
+                    });
                 },
-                error: function(xhr, status, error) {
-                    console.error(error);
+                error: function(err) {
+                    console.log(err)
                 }
             });
         }
     </script>
-
-
     
-    
-    
-    
-
 </body>
 </html>
