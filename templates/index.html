@@ -96,6 +96,8 @@
             overflow-y: auto; 
         }
 
+        #current-model
+
         .loading {
             display: flex;
             align-items: center;
@@ -158,6 +160,7 @@
         <div id="mapid"></div>
     </div>
     <div id="output-container">
+        <p class="current-model">Current model: {{ model }}</p>
         <button id="change-model-button" class="change-model-button">Change Model</button>
         <h2>Historical Facts</h2>
         <h5 id="selected-text" style="font-style: italic;"></h5>

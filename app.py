@@ -2,7 +2,7 @@
 This is the main flask application. The script contains endpoints
 to handle the different kinds of requests that come from the dashboard.
 
-TODO: Add webpage for manually OpenAI key input
+TODO: Add webpage for manually OpenAI key input.
 
 Written by: AaronWard
 """
@@ -13,8 +13,8 @@ from flask import Flask, render_template, request, jsonify, session, redirect, u
 from flask_session import Session
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
-from src.history_chain import HistoryChain
-from src.followup_chain import FollowUpChain
+from src.chains.history_chain import HistoryChain
+from src.chains.followup_chain import FollowUpChain
 from src.utils.env_utils import get_openai_key
 
 app = Flask(__name__)
@@ -89,12 +89,34 @@ def select_model():
     else:
         return "Error in getting models from OpenAI", 500
     
+@app.route('/api_key', methods=['GET', 'POST'])
+def api_key():
+    if request.method == 'POST':
+        api_key = request.form.get('api_key')
+        session['api_key'] = api_key
+        return redirect(url_for('index')) # Redirect to index after setting the key
+    return render_template('api_key.html')
+
+
 @app.route('/')
 def index():
-    if 'model' in session:
-        return render_template('index.html')
+    #make sure the API key is provided before loading the dashboard
+    if 'api_key' in session:
+        app.secret_key = session['api_key']
+        #make sure a model is chosen before loading the dashboard
+        if 'model' in session:
+            return render_template('index.html', model=session['model'])
+        else:
+            return redirect(url_for('select_model'))
     else:
-        return redirect(url_for('select_model'))
+        return redirect(url_for('api_key'))
+
+@app.route('/logout')
+def logout():
+    # remove the API key from the session if it's there
+    session.pop('api_key', None)
+    return redirect(url_for('index'))
+
 
 @app.route('/get_location', methods=['POST'])
 def get_location():
@@ -120,6 +142,9 @@ def get_history():
 
 @app.route('/handle_selected_text', methods=['POST'])
 def handle_selected_text():
+    # Use highlighted text as 
+    # a search term to a LLM
+
     if 'model' not in session:
         return redirect(url_for('select_model'))
 
