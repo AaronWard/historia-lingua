@@ -1,0 +1,5 @@
+langchain
+dotenv
+geopy
+flask_session
+flask
