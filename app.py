@@ -1,3 +1,11 @@
+"""
+This is the main flask application. The script contains endpoints
+to handle the different kinds of requests that come from the dashboard.
+
+TODO: Add webpage for manually OpenAI key input
+
+Written by: AaronWard
+"""
 import os
 import requests
 import argparse
@@ -34,14 +42,24 @@ def get_location_detail(lat, lon, zoom):
     location = geolocator.reverse([lat, lon], exactly_one=True)
     address = location.raw['address']
 
-    if zoom <=2:
+    # Display different location granularity
+    # depending on the zoom level of the map.
+    # IE: you can go down to street level if 
+    # you soom in enough
+    if zoom <= 2:
         return address.get('country', '')
     elif zoom <= 5:
-        return ', '.join(filter(None, [address.get('state', ''), address.get('country', '')]))
+        return ', '.join(filter(None, [address.get('state', ''),
+                                       address.get('country', '')]))
     elif zoom <= 13:
-        return ', '.join(filter(None, [address.get('city', ''), address.get('state', ''), address.get('country', '')]))
+        return ', '.join(filter(None, [address.get('city', ''), 
+                                       address.get('state', ''), 
+                                       address.get('country', '')]))
     else:
-        return ', '.join(filter(None, [address.get('road', ''), address.get('city', ''), address.get('state', ''), address.get('country', '')]))
+        return ', '.join(filter(None, [address.get('road', ''), 
+                                       address.get('city', ''),
+                                       address.get('state', ''), 
+                                       address.get('country', '')]))
 
 def get_available_models():
     try:
@@ -86,7 +104,6 @@ def get_location():
     zoom = data['zoom']
 
     location_detail = get_location_detail(lat, lon, zoom)
-    
     return jsonify({'address': location_detail})
 
 @app.route('/get_history', methods=['POST'])
@@ -96,7 +113,8 @@ def get_history():
 
     history_chain, _ = set_up_chains(session['model'])
     data = request.get_json()
-    response = history_chain.run({"location": data['location'], "time_period": data['year']})
+    response = history_chain.run({"location": data['location'], 
+                                  "time_period": data['year']})
     
     return jsonify({'response': response['response']})
 
@@ -108,8 +126,10 @@ def handle_selected_text():
     _, followup_chain = set_up_chains(session['model'])
     data = request.get_json()
 
-    response = followup_chain.run({"location": data['location'], "time_period": data['year'],
-                                   "previous_response": data['previous_response'], "selected_text": data['selected_text']})
+    response = followup_chain.run({"location": data['location'], 
+                                   "time_period": data['year'],
+                                   "previous_response": data['previous_response'], 
+                                   "selected_text": data['selected_text']})
     
     return jsonify({'response': response['response']})
 

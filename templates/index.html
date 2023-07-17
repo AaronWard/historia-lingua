@@ -178,6 +178,23 @@
     <script src="https://unpkg.com/jquery"></script>
     <script src="https://unpkg.com/leaflet"></script>    
     <script>
+        /**
+         * There are a number of main functionalities within the UI
+         * handled by javascript. Such as:
+         *
+         * 1. There is a slider that can be used to choose the time period from -4000BC to 2000AD.
+         * 2. When a map is clicked, the geo coordinates are used to determine
+         * the name of the location. These are then displayed onscreen in a bubble.
+         * 3. Then location in text format, along with the year are passed to the HistoryChain
+         * which requests a historical account for that location around the chosen time period.
+         * 4. The response is parsed and displayed in the output panel.
+         * 5. Event listeners are used to detect if someone want's to highlight a text and
+         * "expand" on that topic for further knowledge of that topic (same location/time period)
+         * 6. There is also the option to change your model type within the session.
+         * 
+         * TODO: Add images search results to the output panel
+         * 
+         **/
         // Initializing necessary variables and map setup
         var map = L.map('mapid').setView([51.505, -0.09], 5);
         L.tileLayer('https://{s}.tile.openstreetmap.de/tiles/osmde/{z}/{x}/{y}.png', {
