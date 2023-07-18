@@ -26,7 +26,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("--env_path", help="The path to the .env file containing the OpenAI key")
 args = parser.parse_args()
 load_dotenv(dotenv_path=args.env_path)
-app.secret_key = get_openai_key(args.env_path)
+# app.secret_key = get_openai_key(args.env_path)
 
 if app.config['SECRET_KEY']:
     print("Secret key set correctly.")
@@ -62,6 +62,7 @@ def get_location_detail(lat, lon, zoom):
                                        address.get('country', '')]))
 
 def get_available_models():
+    print(app.secret_key)
     try:
         response = requests.get(
             "https://api.openai.com/v1/models",
@@ -71,10 +72,12 @@ def get_available_models():
             models = response.json()['data']
             return [model['id'] for model in models]
         else:
-            return None
+            print("Error in getting available models: HTTP status code", response.status_code)
+            return []
     except Exception as e:
         print("Error in getting available models:", str(e))
-        return None
+        return []
+
 
 @app.route('/select_model', methods=['GET', 'POST'])
 def select_model():
@@ -87,7 +90,8 @@ def select_model():
                 return redirect(url_for('index'))
         return render_template('select_model.html', models=available_models)
     else:
-        return "Error in getting models from OpenAI", 500
+        return "Error in getting models from OpenAI. Check your API key or OpenAI's service status.", 500
+
     
 @app.route('/api_key', methods=['GET', 'POST'])
 def api_key():
