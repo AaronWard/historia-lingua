@@ -1,5 +1,5 @@
 """
-This is the main flask application. The script contains endpoints
+This is the main flask application for Historia Lingua. The script contains endpoints
 to handle the different kinds of requests that come from the dashboard.
 
 TODO: Add webpage for manually OpenAI key input.
@@ -8,39 +8,45 @@ Written by: AaronWard
 """
 import os
 import requests
-import argparse
+import openai
+import atexit
+import shutil
 from flask import Flask, render_template, request, jsonify, session, redirect, url_for
 from flask_session import Session
 from geopy.geocoders import Nominatim
 from dotenv import load_dotenv
 from src.chains.history_chain import HistoryChain
 from src.chains.followup_chain import FollowUpChain
-from src.utils.env_utils import get_openai_key
 
 app = Flask(__name__)
+
 app.config['SESSION_TYPE'] = 'filesystem'
+app.config['SECRET_KEY'] = 'you-should-change-this'  # Set a secret key for session
+
+# Check if session directory exists and delete it if found
+session_dir = app.config.get('SESSION_FILE_DIR')
+if session_dir and os.path.exists(session_dir):
+    try:
+        shutil.rmtree(session_dir)
+    except Exception as e:
+        print(f"Error deleting session directory: {str(e)}")
+
 Session(app)
 geolocator = Nominatim(user_agent="map_app")
-
-parser = argparse.ArgumentParser()
-parser.add_argument("--env_path", help="The path to the .env file containing the OpenAI key")
-args = parser.parse_args()
-load_dotenv(dotenv_path=args.env_path)
-# app.secret_key = get_openai_key(args.env_path)
-
-if app.config['SECRET_KEY']:
-    print("Secret key set correctly.")
-else:
-    print("Failed to set secret key.")
+history_chain = None
+followup_chain = None
 
 def set_up_chains(model):
-    history_chain = HistoryChain(openai_api_key=app.secret_key, model=model)
-    followup_chain = FollowUpChain(openai_api_key=app.secret_key, model=model)
-    return history_chain, followup_chain
+    global history_chain
+    global followup_chain
+    openai.api_key = session['api_key']
+
+    history_chain = HistoryChain(openai_api_key=session['api_key'], model=model)
+    followup_chain = FollowUpChain(openai_api_key=session['api_key'], model=model)
 
 def get_location_detail(lat, lon, zoom):
-    location = geolocator.reverse([lat, lon], exactly_one=True)
-    address = location.raw['address']
+    location = geolocator.reverse([lat, lon], exactly_one=True)    
+    address = location.raw.get('address')
 
     # Display different location granularity
     # depending on the zoom level of the map.
@@ -62,11 +68,10 @@ def get_location_detail(lat, lon, zoom):
                                        address.get('country', '')]))
 
 def get_available_models():
-    print(app.secret_key)
     try:
         response = requests.get(
             "https://api.openai.com/v1/models",
-            headers={"Authorization": f"Bearer {app.secret_key}"}
+            headers={"Authorization": f"Bearer {session['api_key']}"}
         )
         if response.status_code == 200:
             models = response.json()['data']
@@ -79,42 +84,53 @@ def get_available_models():
         return []
 
 
-@app.route('/select_model', methods=['GET', 'POST'])
-def select_model():
-    available_models = get_available_models()
-    if available_models:
-        if request.method == 'POST':
-            selected_model = request.form.get('model')
-            if selected_model in available_models:
-                session['model'] = selected_model
-                return redirect(url_for('index'))
-        return render_template('select_model.html', models=available_models)
-    else:
-        return "Error in getting models from OpenAI. Check your API key or OpenAI's service status.", 500
 
-    
+@app.route('/select_model', methods=['POST', 'GET'])
+def select_model():
+    if request.method == 'POST':
+
+        session['model'] = request.form['model']
+        set_up_chains(session['model'])
+        return redirect('/')
+    else:
+        if 'api_key' in session:
+            # Set the API key from session
+            openai.api_key = session['api_key']
+            # Use the key to list models
+            session['models'] = [model.id for model in openai.Model.list().data]
+            return render_template('select_model.html', models=session['models'])
+        else:
+            # Redirect to API key page if no key is found in session
+            return redirect('/api_key')
+
+
+
 @app.route('/api_key', methods=['GET', 'POST'])
 def api_key():
     if request.method == 'POST':
-        api_key = request.form.get('api_key')
-        session['api_key'] = api_key
-        return redirect(url_for('index')) # Redirect to index after setting the key
-    return render_template('api_key.html')
+        # Store API key in session
+        session['api_key'] = request.form['api-key']
+        # Redirect to select_model after setting API key
+        # If the model isn't set, then it will use the set api 
+        # key and request the list of available models 
+        # with select_models.html
+        return redirect('/select_model')
+    else:
+        return render_template('api_key.html')
 
 
 @app.route('/')
-def index():
-    #make sure the API key is provided before loading the dashboard
-    if 'api_key' in session:
-        app.secret_key = session['api_key']
-        #make sure a model is chosen before loading the dashboard
-        if 'model' in session:
-            return render_template('index.html', model=session['model'])
-        else:
-            return redirect(url_for('select_model'))
+def main():
+    # checks to see if the model and the api key are set within the session
+    # If not, it will redirect to the api_key page for the users input with api_key.html
+    if 'api_key' not in session or 'model' not in session:
+        return redirect('/api_key')
     else:
-        return redirect(url_for('api_key'))
-
+        # When both are set, then it will instantiate the global chain 
+        # variables using the selected model name and given api key,
+        # and load index.html
+        return render_template('index.html')
+    
 @app.route('/logout')
 def logout():
     # remove the API key from the session if it's there
@@ -132,34 +148,32 @@ def get_location():
     location_detail = get_location_detail(lat, lon, zoom)
     return jsonify({'address': location_detail})
 
+
 @app.route('/get_history', methods=['POST'])
 def get_history():
-    if 'model' not in session:
-        return redirect(url_for('select_model'))
-
-    history_chain, _ = set_up_chains(session['model'])
     data = request.get_json()
-    response = history_chain.run({"location": data['location'], 
-                                  "time_period": data['year']})
-    
+    if history_chain is None:
+        # Initialize the chains if not already done
+        set_up_chains(session['model'])
+
+    response = history_chain.run({"location": data['location'], "time_period": data['year']})
     return jsonify({'response': response['response']})
+
+
 
 @app.route('/handle_selected_text', methods=['POST'])
 def handle_selected_text():
-    # Use highlighted text as 
-    # a search term to a LLM
-
-    if 'model' not in session:
-        return redirect(url_for('select_model'))
-
-    _, followup_chain = set_up_chains(session['model'])
     data = request.get_json()
+    if followup_chain is None:
+        # Initialize the chains if not already done
+        set_up_chains(session['model'])
 
-    response = followup_chain.run({"location": data['location'], 
-                                   "time_period": data['year'],
-                                   "previous_response": data['previous_response'], 
-                                   "selected_text": data['selected_text']})
-    
+    response = followup_chain.run({
+        "location": data['location'],
+        "time_period": data['year'],
+        "previous_response": data['previous_response'],
+        "selected_text": data['selected_text']
+    })
     return jsonify({'response': response['response']})
 
 if __name__ == "__main__":

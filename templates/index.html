@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Historical Map</title>
+    <title>Historia Lingua 🗺️</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <style>
         body, html {
@@ -96,7 +96,9 @@
             overflow-y: auto; 
         }
 
-        #current-model
+        #current-model {
+            font-style: italic;
+        }
 
         .loading {
             display: flex;
@@ -139,18 +141,26 @@
             user-select: none; /* Standard syntax */
         }
 
+        .model-container {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .current-model {
+            font-style: italic;
+            margin-right: 10px;
+        }
+
         .change-model-button {
             position: right;
-            top: 10px; 
-            left: 10px;
             float: right;
             background-color: #5C6B9C;
             color: white;
             border: none;
-            /* cursor: pointer; */
             padding: 5px 10px;
             border-radius: 3px;
-            
         }
 
     </style>
@@ -160,8 +170,10 @@
         <div id="mapid"></div>
     </div>
     <div id="output-container">
-        <p class="current-model">Current model: {{ model }}</p>
-        <button id="change-model-button" class="change-model-button">Change Model</button>
+        <div class="model-container">
+            <p class="current-model">Current model: {{ session['model'] }}</p>
+            <button id="change-model-button" class="change-model-button">Change Model</button>
+        </div>
         <h2>Historical Facts</h2>
         <h5 id="selected-text" style="font-style: italic;"></h5>
         <div id="output"></div>
@@ -328,8 +340,8 @@
         function handleSelectedText(selectedText) {
             var year = document.getElementById('year-slider').value;
             var yearString = year <= 0 ? Math.abs(year) + ' BC' : year + ' AD';
-            var previous_response = document.getElementById('output-container').innerHTML;
-    
+            var previousResponse = document.getElementById('output-container').querySelector('p').innerHTML;
+
             $.ajax({
                 url: '/get_location',
                 type: 'POST',
@@ -345,7 +357,7 @@
                 },
                 success: function(response) {
                     var location = response.address;
-    
+
                     // Make subsequent request after the location is fetched
                     $.ajax({
                         url: '/handle_selected_text',
@@ -354,14 +366,32 @@
                         data: JSON.stringify({
                             location: location,
                             year: yearString,
-                            previous_response: previous_response,
+                            previous_response: previousResponse,
                             selected_text: selectedText
                         }),
                         beforeSend: function() {
                             output.innerHTML = '<div class="loading"></div>';
                         },
                         success: function(response) {
-                            document.getElementById('output-container').innerHTML = previous_response + '<p>' + response.response + '</p>';
+                            var newResponse = response.response;
+
+                            // Update the output container with the new response
+                            var outputContainer = document.getElementById('output-container');
+                            outputContainer.innerHTML = previousResponse + '<p>' + newResponse + '</p>';
+
+                            var facts = newResponse.split(/\d+\.\s/);
+                            var factsList = '<ul>';
+                            for (var i = 1; i < facts.length; i++) {
+                                var fact = facts[i].trim();
+                                if (fact === ".") {
+                                    continue; // Skip if fact is a single full stop
+                                }
+                                var listItem = '<li>' + fact + '</li>';
+                                factsList += listItem;
+                            }
+                            factsList += '</ul>';
+
+                            output.innerHTML = factsList;
                         },
                         error: function(xhr, status, error) {
                             console.error(error);
@@ -369,10 +399,11 @@
                     });
                 },
                 error: function(err) {
-                    console.log(err)
+                    console.log(err);
                 }
             });
         }
+
     </script>
     
 </body>

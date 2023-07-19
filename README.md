@@ -1,4 +1,4 @@
-# histori-lingua
+# historia-lingua
 Interactive LLM powered history application. You decide the year and location using a graphical interface, and the LLM provides you history knowledge of what happened in that region around that time period.
 
 <center>
